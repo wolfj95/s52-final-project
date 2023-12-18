@@ -38,7 +38,7 @@ load("WVS_Cross-National_Wave_7_rData_v5_0.rdata", dat <- new.env())
 dat <- dat[["WVS_Cross-National_Wave_7_v5_0"]]
 ```
 
-##Step 0: Data cleaning
+# Data cleaning
 
 ```{r clean}
 # create binary variable for regime type [0==non-dem; 1==dem]
@@ -47,7 +47,7 @@ dat$regime_bin <- ifelse(dat$regtype >=1 & dat$regtype <= 3, 0, ifelse(dat$regty
 dat_countries <- dat[match(unique(dat$B_COUNTRY_ALPHA), dat$B_COUNTRY_ALPHA),]
 ```
 
-## Step 1: Rescaling and demeaning individual-level variables
+## Rescaling and demeaning individual-level variables
 ```{r rescale_individual}
 
 #RESCALE
@@ -85,6 +85,7 @@ dat_transformed <- transform(dat_transformed, GDPpercap1_scaled = GDPpercap1/1e9
 
 
 # DEMEANING for dem and non-dem countries
+# split into dem and non-dem for summary stats (i.e. demean only within dempcracies)
 dat_transformed_nondem <- filter(dat_transformed, dat_transformed$regime_bin==0)
 dat_transformed_dem <- filter(dat_transformed, dat_transformed$regime_bin==1)
 
@@ -104,29 +105,49 @@ dat_transformed_dem <- transform(dat_transformed_dem, sm_pol_demeaned = sm_pol-m
 dat_transformed_nondem <- transform(dat_transformed_nondem, higher_ed_demeaned = higher_ed-mean(higher_ed, na.rm=TRUE))
 dat_transformed_dem <- transform(dat_transformed_dem, higher_ed_demeaned = higher_ed-mean(higher_ed, na.rm=TRUE))
 
-#Create a variable representing each country's average score for Mundlak
+#Create a variable representing each country's average score and standard deviation for Mundlak
 dat_transformed_nondem <- dat_transformed_nondem %>%
   group_by(B_COUNTRY_ALPHA) %>%
   mutate(higher_ed_avg = mean(higher_ed, na.rm = TRUE),
+         higher_ed_sd = sd(higher_ed, na.rm = TRUE),
+         sm_pol_avg = mean(sm_pol, na.rm = TRUE),
+         sm_pol_sd = sd(sm_pol, na.rm = TRUE),
          sm_pol_demeaned_avg = mean(sm_pol_demeaned, na.rm = TRUE),
+         sm_pol_demeaned_sd = sd(sm_pol_demeaned, na.rm = TRUE),
+         proc_dem_avg = mean(proc_dem, na.rm = TRUE),
+         proc_dem_sd = sd(proc_dem, na.rm = TRUE),
          proc_dem_demeaned_avg = mean(proc_dem_demeaned, na.rm = TRUE),
-         lib_dem_demeaned_avg = mean(lib_dem_demeaned, na.rm = TRUE)
+         proc_dem_demeaned_sd = sd(proc_dem_demeaned, na.rm = TRUE),
+         lib_dem_avg = mean(lib_dem, na.rm = TRUE),
+         lib_dem_sd = sd(lib_dem, na.rm = TRUE),
+         lib_dem_demeaned_avg = mean(lib_dem_demeaned, na.rm = TRUE),
+         lib_dem_demeaned_sd = sd(lib_dem_demeaned, na.rm = TRUE)
         )
 dat_transformed_nondem <- as.data.frame(dat_transformed_nondem)
 
 dat_transformed_dem <- dat_transformed_dem %>%
   group_by(B_COUNTRY_ALPHA) %>%
   mutate(higher_ed_avg = mean(higher_ed, na.rm = TRUE),
+         higher_ed_sd = sd(higher_ed, na.rm = TRUE),
+         sm_pol_avg = mean(sm_pol, na.rm = TRUE),
+         sm_pol_sd = sd(sm_pol, na.rm = TRUE),
          sm_pol_demeaned_avg = mean(sm_pol_demeaned, na.rm = TRUE),
+         sm_pol_demeaned_sd = sd(sm_pol_demeaned, na.rm = TRUE),
+         proc_dem_avg = mean(proc_dem, na.rm = TRUE),
+         proc_dem_sd = sd(proc_dem, na.rm = TRUE),
          proc_dem_demeaned_avg = mean(proc_dem_demeaned, na.rm = TRUE),
-         lib_dem_demeaned_avg = mean(lib_dem_demeaned, na.rm = TRUE)
+         proc_dem_demeaned_sd = sd(proc_dem_demeaned, na.rm = TRUE),
+         lib_dem_avg = mean(lib_dem, na.rm = TRUE),
+         lib_dem_sd = sd(lib_dem, na.rm = TRUE),
+         lib_dem_demeaned_avg = mean(lib_dem_demeaned, na.rm = TRUE),
+         lib_dem_demeaned_sd = sd(lib_dem_demeaned, na.rm = TRUE)
         )
 dat_transformed_dem <- as.data.frame(dat_transformed_dem)
 
 
 ```
 
-## Step X: Transforming country-level variables
+## Transforming country-level variables
 ```{r rescale_country}
 dat_countries_nondem <- dat_transformed_nondem[match(unique(dat_transformed_nondem$B_COUNTRY_ALPHA), dat_transformed_nondem$B_COUNTRY_ALPHA),]
 dat_countries_dem <- dat_transformed_dem[match(unique(dat_transformed_dem$B_COUNTRY_ALPHA), dat_transformed_dem$B_COUNTRY_ALPHA),]
@@ -139,83 +160,85 @@ dat_countries_dem <- transform(dat_countries_dem, GDPpercap1_scaled = GDPpercap1
 ```
 
 
-## EDA
+# EDA
 
-### Histograms
-#### Understanding of democracy
+## Histograms
+### Understanding of democracy
 ```{r hist_dem}
-non_dem_proc_dem <- ggplot(dat_nondem, aes(x = proc_dem)) + 
+non_dem_proc_dem <- ggplot(dat_transformed_nondem, aes(x = proc_dem)) + 
   geom_histogram(aes(y = after_stat(count / sum(count))), binwidth = 1) + 
   scale_y_continuous(labels = scales::percent) +
-  geom_vline(xintercept = mean(dat_nondem$proc_dem, na.rm = TRUE), color = "red") + 
-  annotate("text", x=mean(dat_nondem$proc_dem, na.rm = TRUE)-2, y=.3, label=paste(c("mean:", format(round(mean(dat_nondem$proc_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
-  geom_vline(xintercept = median(dat_nondem$proc_dem, na.rm = TRUE), color = "green") + 
-  annotate("text", x=median(dat_nondem$proc_dem, na.rm = TRUE)-2, y=.2, label=paste(c("median:", format(round(median(dat_nondem$proc_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="green") +
+  geom_vline(xintercept = mean(dat_transformed_nondem$proc_dem, na.rm = TRUE), color = "red") + 
+  annotate("text", x=mean(dat_transformed_nondem$proc_dem, na.rm = TRUE)-2, y=.3, label=paste(c("mean:", format(round(mean(dat_transformed_nondem$proc_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
+  geom_vline(xintercept = median(dat_transformed_nondem$proc_dem, na.rm = TRUE), color = "blue") + 
+  annotate("text", x=median(dat_transformed_nondem$proc_dem, na.rm = TRUE)-2, y=.2, label=paste(c("median:", format(round(median(dat_transformed_nondem$proc_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="blue") +
   xlab("Procedural democracy in non-democracy") +
   ylab("Percentage of Responses")
 
-dem_proc_dem <- ggplot(dat_dem, aes(x = proc_dem)) + 
+dem_proc_dem <- ggplot(dat_transformed_dem, aes(x = proc_dem)) + 
   geom_histogram(aes(y = after_stat(count / sum(count))), binwidth = 1) + 
   scale_y_continuous(labels = scales::percent) +
-  geom_vline(xintercept = mean(dat_dem$proc_dem, na.rm = TRUE), color = "red") + 
-  geom_vline(xintercept = median(dat_dem$proc_dem, na.rm = TRUE), color = "green") + 
-  annotate("text", x=mean(dat_dem$proc_dem, na.rm = TRUE)-2, y=.3, label=paste(c("mean:", format(round(mean(dat_dem$proc_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
-  annotate("text", x=median(dat_dem$proc_dem, na.rm = TRUE)-2, y=.2, label=paste(c("median:", format(round(median(dat_dem$proc_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="green") +
+  geom_vline(xintercept = mean(dat_transformed_dem$proc_dem, na.rm = TRUE), color = "red") + 
+  geom_vline(xintercept = median(dat_transformed_dem$proc_dem, na.rm = TRUE), color = "blue") + 
+  annotate("text", x=mean(dat_transformed_dem$proc_dem, na.rm = TRUE)-2, y=.3, label=paste(c("mean:", format(round(mean(dat_transformed_dem$proc_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
+  annotate("text", x=median(dat_transformed_dem$proc_dem, na.rm = TRUE)-2, y=.2, label=paste(c("median:", format(round(median(dat_transformed_dem$proc_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="blue") +
   xlab("Procedural democracy in democracy") +
   ylab("Percentage of Responses")
 
 
-non_dem_lib_dem <- ggplot(dat_nondem, aes(x = lib_dem)) + 
+non_dem_lib_dem <- ggplot(dat_transformed_nondem, aes(x = lib_dem)) + 
   geom_histogram(aes(y = after_stat(count / sum(count))), binwidth = 1) + 
   scale_y_continuous(labels = scales::percent) +
-  geom_vline(xintercept = mean(dat_nondem$lib_dem, na.rm = TRUE), color = "red") + 
-  annotate("text", x=mean(dat_nondem$lib_dem, na.rm = TRUE)-2, y=.3, label=paste(c("mean:", format(round(mean(dat_nondem$lib_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
-  geom_vline(xintercept = median(dat_nondem$lib_dem, na.rm = TRUE), color = "green") + 
-  annotate("text", x=median(dat_nondem$lib_dem, na.rm = TRUE)-2, y=.2, label=paste(c("median:", format(round(median(dat_nondem$lib_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="green") +
+  geom_vline(xintercept = mean(dat_transformed_nondem$lib_dem, na.rm = TRUE), color = "red") + 
+  annotate("text", x=mean(dat_transformed_nondem$lib_dem, na.rm = TRUE)-2, y=.3, label=paste(c("mean:", format(round(mean(dat_transformed_nondem$lib_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
+  geom_vline(xintercept = median(dat_transformed_nondem$lib_dem, na.rm = TRUE), color = "blue") + 
+  annotate("text", x=median(dat_transformed_nondem$lib_dem, na.rm = TRUE)-2, y=.2, label=paste(c("median:", format(round(median(dat_transformed_nondem$lib_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="blue") +
   xlab("Liberal democracy in non-democracy") +
   ylab("Percentage of Responses")
 
-dem_lib_dem <- ggplot(dat_dem, aes(x = lib_dem)) + 
+dem_lib_dem <- ggplot(dat_transformed_dem, aes(x = lib_dem)) + 
   geom_histogram(aes(y = after_stat(count / sum(count))), binwidth = 1) + 
   scale_y_continuous(labels = scales::percent) +  
-  geom_vline(xintercept = mean(dat_dem$lib_dem, na.rm = TRUE), color = "red") + 
-  annotate("text", x=mean(dat_dem$lib_dem, na.rm = TRUE)-2, y=.3, label=paste(c("mean:", format(round(mean(dat_dem$lib_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
-  geom_vline(xintercept = median(dat_dem$lib_dem, na.rm = TRUE), color = "green") + 
-  annotate("text", x=median(dat_dem$lib_dem, na.rm = TRUE)-2, y=.2, label=paste(c("median:", format(round(median(dat_dem$lib_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="green") +
+  geom_vline(xintercept = mean(dat_transformed_dem$lib_dem, na.rm = TRUE), color = "red") + 
+  annotate("text", x=mean(dat_transformed_dem$lib_dem, na.rm = TRUE)-2, y=.3, label=paste(c("mean:", format(round(mean(dat_transformed_dem$lib_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
+  geom_vline(xintercept = median(dat_transformed_dem$lib_dem, na.rm = TRUE), color = "blue") + 
+  annotate("text", x=median(dat_transformed_dem$lib_dem, na.rm = TRUE)-2, y=.2, label=paste(c("median:", format(round(median(dat_transformed_dem$lib_dem, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="blue") +
   xlab("Liberal democracy in democracy") +
   ylab("Percentage of Responses")
 
 grid.arrange(non_dem_proc_dem, dem_proc_dem, non_dem_lib_dem, dem_lib_dem, ncol=2)
 ```
 
-#### Social media use for political purposes and higher ed
+### Social media use for political purposes and higher ed
 ```{r hist_pred}
-non_dem_sm_pol <- ggplot(dat_nondem, aes(x = sm_pol)) + 
+non_dem_sm_pol <- ggplot(dat_transformed_nondem, aes(x = sm_pol)) + 
   geom_histogram(binwidth = 1) + 
-  geom_vline(xintercept = mean(dat_nondem$sm_pol, na.rm = TRUE), color = "red") + 
-  annotate("text", x=mean(dat_nondem$sm_pol, na.rm = TRUE)-.25, y=8000, label=format(round(mean(dat_nondem$sm_pol, na.rm = TRUE), 2), nsmall = 2), color="red") +
+  geom_vline(xintercept = mean(dat_transformed_nondem$sm_pol, na.rm = TRUE), color = "red") + 
+  annotate("text", x=mean(dat_transformed_nondem$sm_pol, na.rm = TRUE)-.5, y=600, label=paste(c("mean:", format(round(mean(dat_transformed_nondem$sm_pol, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
+  #geom_vline(xintercept = median(dat_transformed_nondem$sm_pol, na.rm = TRUE), color = "blue") + 
+  #annotate("text", x=median(dat_transformed_nondem$sm_pol, na.rm = TRUE)-.7, y=1000, label=paste(c("median:", format(round(median(dat_transformed_nondem$sm_pol, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="blue") +
   xlab("Social Media Use in non-democracy") +
   ylab("Count")
 
-dem_sm_pol <- ggplot(dat_dem, aes(x = sm_pol)) + 
+dem_sm_pol <- ggplot(dat_transformed_dem, aes(x = sm_pol)) + 
   geom_histogram(binwidth = 1) + 
-  geom_vline(xintercept = mean(dat_dem$sm_pol, na.rm = TRUE), color = "red") + 
-  annotate("text", x=mean(dat_dem$sm_pol, na.rm = TRUE)-.25, y=8000, label=format(round(mean(dat_dem$sm_pol, na.rm = TRUE), 2), nsmall = 2), color="red") +
+  geom_vline(xintercept = mean(dat_transformed_dem$sm_pol, na.rm = TRUE), color = "red") + 
+  annotate("text", x=mean(dat_transformed_dem$sm_pol, na.rm = TRUE)-.5, y=900, label=paste(c("mean:", format(round(mean(dat_transformed_dem$sm_pol, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
   xlab("Social Media Use in democracy") +
   ylab("Count")
 
 
-non_dem_higher_ed <- ggplot(dat_nondem, aes(x = higher_ed)) + 
+non_dem_higher_ed <- ggplot(dat_transformed_nondem, aes(x = higher_ed)) + 
   geom_histogram(binwidth = 1) + 
-  geom_vline(xintercept = mean(dat_nondem$higher_ed, na.rm = TRUE), color = "red") + 
-  annotate("text", x=mean(dat_nondem$higher_ed, na.rm = TRUE)-.2, y=8000, label=format(round(mean(dat_nondem$higher_ed, na.rm = TRUE), 2), nsmall = 2), color="red") +
+  geom_vline(xintercept = mean(dat_transformed_nondem$higher_ed, na.rm = TRUE), color = "red") + 
+  annotate("text", x=mean(dat_transformed_nondem$higher_ed, na.rm = TRUE)-.5, y=900, label=paste(c("mean:", format(round(mean(dat_transformed_nondem$higher_ed, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
   xlab("Higher Ed in non-democracy") +
   ylab("Count")
 
-dem_higher_ed <- ggplot(dat_dem, aes(x = higher_ed)) + 
+dem_higher_ed <- ggplot(dat_transformed_dem, aes(x = higher_ed)) + 
   geom_histogram(binwidth = 1) + 
-  geom_vline(xintercept = mean(dat_dem$higher_ed, na.rm = TRUE), color = "red") + 
-  annotate("text", x=mean(dat_dem$higher_ed, na.rm = TRUE)-.2, y=8000, label=format(round(mean(dat_dem$higher_ed, na.rm = TRUE), 2), nsmall = 2), color="red") +
+  geom_vline(xintercept = mean(dat_transformed_dem$higher_ed, na.rm = TRUE), color = "red") +
+  annotate("text", x=mean(dat_transformed_dem$higher_ed, na.rm = TRUE)-.5, y=1800, label=paste(c("mean:", format(round(mean(dat_transformed_dem$higher_ed, na.rm = TRUE), 2), nsmall = 2)), collapse = " "), color="red") +
   xlab("Higher ed in democracy") +
   ylab("Count")
 
@@ -223,7 +246,156 @@ dem_higher_ed <- ggplot(dat_dem, aes(x = higher_ed)) +
 grid.arrange(non_dem_sm_pol, dem_sm_pol, non_dem_higher_ed, dem_higher_ed, ncol=2)
 ```
 
-## Step 2: Checking stats with paper
+## Scatter: 
+### Recreating country avg understanding scatterplots
+``` {r scatter_democracy_understanding}
+
+# Understanding of Procedural Democracy for non-democracies
+nondem_proc_dem_plot <- ggplot(dat_countries_nondem, aes(x = proc_dem_avg, y = B_COUNTRY_ALPHA, xmin = proc_dem_avg-proc_dem_sd, xmax = proc_dem_avg+proc_dem_sd)) +
+        # geom_line() +
+        geom_point() +
+        #geom_errorbarh(height=.2) +
+        #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+        #geom_vline(xintercept = 81.5, col = "red") +
+        #ylim(0, 1) +
+        xlim(0, 10) +
+        xlab("Avg Understanding (Procedural)") +
+        ylab("Country") +
+        labs(title = "Non-Democracies") +
+        theme(axis.text.y=element_text(size=4))
+
+dem_proc_dem_plot <- ggplot(dat_countries_dem, aes(x = proc_dem_avg, y = B_COUNTRY_ALPHA, xmin = proc_dem_avg-proc_dem_sd, xmax = proc_dem_avg+proc_dem_sd)) +
+      # geom_line() +
+      geom_point() +
+      #geom_errorbarh(height=.2) +
+      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+      #geom_vline(xintercept = 81.5, col = "red") +
+      #ylim(0, 1) +
+      xlim(0, 10) +
+      xlab("Avg Understanding (Procedural)") +
+      ylab("Country") +
+      labs(title = "Democracies") +
+      theme(axis.text.y=element_text(size=4))
+
+nondem_lib_dem_plot <- ggplot(dat_countries_nondem, aes(x = lib_dem_avg, y = B_COUNTRY_ALPHA, xmin = lib_dem_avg-lib_dem_sd, xmax = lib_dem_avg+lib_dem_sd)) +
+      # geom_line() +
+      geom_point() +
+      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+      #geom_vline(xintercept = 81.5, col = "red") +
+      #ylim(0, 1) +
+      xlim(0, 10) +
+      xlab("Avg Understanding (Liberal)") +
+      ylab("Country") +
+      labs(title = "Non-Democracies") +
+      theme(axis.text.y=element_text(size=4))
+
+dem_lib_dem_plot <- ggplot(dat_countries_dem,  aes(x = lib_dem_avg, y = B_COUNTRY_ALPHA, xmin = lib_dem_avg-lib_dem_sd, xmax = lib_dem_avg+lib_dem_sd)) +
+      # geom_line() +
+      geom_point() +
+      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+      #geom_vline(xintercept = 81.5, col = "red") +
+      #ylim(0, 1) +
+      xlim(0, 10) +
+      xlab("Avg Understanding (Liberal)") +
+      ylab("Country") +
+      labs(title = "Democracies") +
+      theme(axis.text.y=element_text(size=4))
+
+grid.arrange(nondem_proc_dem_plot, dem_proc_dem_plot, nondem_lib_dem_plot, dem_lib_dem_plot, ncol=2)
+```
+
+### Scatter Social Media and Higher ed by country
+``` {r scatter_sm_higher_ed}
+
+# Social Media for non-democracies
+nondem_smpol_plot <- ggplot(dat_countries_nondem, aes(x = sm_pol_avg, y = B_COUNTRY_ALPHA)) +
+        # geom_line() +
+        geom_point() +
+        #geom_errorbarh(height=.2) +
+        #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+        #geom_vline(xintercept = 81.5, col = "red") +
+        #ylim(0, 1) +
+        xlim(0, 1.75) +
+        xlab("Avg Social Media Use") +
+        ylab("Country") +
+        labs(title = "Non-Democracies") +
+        theme(axis.text.y=element_text(size=4))
+
+# Social Media for democracies
+dem_smpol_plot <- ggplot(dat_countries_dem, aes(x = sm_pol_avg, y = B_COUNTRY_ALPHA)) +
+        # geom_line() +
+        geom_point() +
+        #geom_errorbarh(height=.2) +
+        #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+        #geom_vline(xintercept = 81.5, col = "red") +
+        #ylim(0, 1) +
+        xlim(0, 1.75) +
+        xlab("Avg Social Media Use") +
+        ylab("Country") +
+        labs(title = "Democracies") +
+        theme(axis.text.y=element_text(size=4))
+
+# Higher ed for non-democracies
+nondem_highered_plot <- ggplot(dat_countries_nondem, aes(x = higher_ed_avg, y = B_COUNTRY_ALPHA)) +
+        # geom_line() +
+        geom_point() +
+        #geom_errorbarh(height=.2) +
+        #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+        #geom_vline(xintercept = 81.5, col = "red") +
+        #ylim(0, 1) +
+        xlim(0, .75) +
+        xlab("Avg Higher Ed") +
+        ylab("Country") +
+        labs(title = "Non-Democracies") +
+        theme(axis.text.y=element_text(size=4))
+
+# Higher ed for democracies
+dem_highered_plot <- ggplot(dat_countries_dem, aes(x = higher_ed_avg, y = B_COUNTRY_ALPHA)) +
+        # geom_line() +
+        geom_point() +
+        #geom_errorbarh(height=.2) +
+        #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+        #geom_vline(xintercept = 81.5, col = "red") +
+        #ylim(0, 1) +
+        xlim(0, .75) +
+        xlab("Avg Higher Ed") +
+        ylab("Country") +
+        labs(title = "Democracies") +
+        theme(axis.text.y=element_text(size=4))
+
+grid.arrange(nondem_smpol_plot, dem_smpol_plot, nondem_highered_plot, dem_highered_plot, ncol=2)
+```
+
+### Scatter Plots Social Media Vs. Understanding of Democracy
+```{r scatter_vars}
+non_dem_proc_dem <- ggplot(dat_transformed_nondem, aes(x = sm_pol, y = proc_dem)) + 
+  geom_bin2d() +
+  theme_bw() +
+  xlab("Social Media Use") +
+  ylab("Proc. dem. in non-dem.")
+
+dem_proc_dem <- ggplot(dat_transformed_dem, aes(x = sm_pol, y = proc_dem)) + 
+  geom_bin2d() +
+  theme_bw() +
+  xlab("Social Media Use") +
+  ylab("Proc dem. in dem.")
+
+non_dem_lib_dem <- ggplot(dat_transformed_nondem, aes(x = sm_pol, y = lib_dem)) + 
+  geom_bin2d() +
+  theme_bw() +
+  xlab("Social Media Use") +
+  ylab("Lib dem in non-dem.")
+
+dem_lib_dem <- ggplot(dat_transformed_dem, aes(x = sm_pol, y = lib_dem)) + 
+  geom_bin2d() +
+  theme_bw() +
+  xlab("Social Media Use") +
+  ylab("Liberal dem. in dem.")
+
+grid.arrange(non_dem_proc_dem, dem_proc_dem, non_dem_lib_dem, dem_lib_dem, ncol=2)
+```
+
+# Checking stats with paper
 
 ``` {r stats}
 dat_nondem <- subset(dat_transformed[c("proc_dem", "lib_dem", "sm_pol", "higher_ed", "age", "sex","income", "urban")], dat_transformed$regime_bin==0)
@@ -263,506 +435,6 @@ stargazer(dat_countries_dem,
           align=TRUE)
 ```
 
-
-## Step 3: Recreating country avg understanding scatterplots
-``` {r scatter_country}
-
-# sd(filter(dat_transformed, dat_transformed$regime_bin==0 & dat_transformed$B_COUNTRY_ALPHA=="EGY")$proc_dem, na.rm=TRUE)
-
-
-#filter(dat_transformed, dat_transformed$regime_bin==0) %>%
- # ggplot(aes(x=proc_dem, y=B_COUNTRY_ALPHA)) + 
-  #geom_dotplot(binaxis='y', stackdir='center') 
-  #stat_summary(fun.data="mean_sdl", fun.args = list(mult=1), geom="crossbar", width=0.5)
-
-
-# Understanding of Procedural Democracy for non-democracies
-plot1 <- filter(dat_transformed, dat_transformed$regime_bin==0) %>%
-    group_by(B_COUNTRY_ALPHA) %>%
-      summarize(meanunderstanding = mean(proc_dem, na.rm = TRUE), sd=sd(proc_dem, na.rm = TRUE)) %>%
-      ggplot(aes(x = meanunderstanding, y = B_COUNTRY_ALPHA, xmin = meanunderstanding-sd, xmax = meanunderstanding+sd)) +
-      # geom_line() +
-      geom_point() +
-      #geom_errorbarh(height=.2) +
-      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
-      #geom_vline(xintercept = 81.5, col = "red") +
-      #ylim(0, 1) +
-      xlim(0, 10) +
-      xlab("Avg Understanding") +
-      ylab("Country") +
-      labs(title = "Proc Dem. in Non-Dem.")
-
-plot2 <- filter(dat_transformed, dat_transformed$regime_bin==1) %>%
-    group_by(B_COUNTRY_ALPHA) %>%
-      summarize(meanunderstanding = mean(proc_dem, na.rm = TRUE), sd=sd(proc_dem, na.rm = TRUE)) %>%
-      ggplot(aes(x = meanunderstanding, y = B_COUNTRY_ALPHA, xmin = meanunderstanding-sd, xmax = meanunderstanding+sd)) +
-      # geom_line() +
-      geom_point() +
-      #geom_errorbarh(height=.2) +
-      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
-      #geom_vline(xintercept = 81.5, col = "red") +
-      #ylim(0, 1) +
-      xlim(0, 10) +
-      xlab("Avg Understanding") +
-      ylab("Country") +
-      labs(title = "Proc. Dem. in Dem.")
-
-plot3 <- filter(dat_transformed, dat_transformed$regime_bin==0) %>%
-    group_by(B_COUNTRY_ALPHA) %>%
-      summarize(meanunderstanding = mean(lib_dem, na.rm = TRUE)) %>%
-      ggplot(aes(x = meanunderstanding, y = B_COUNTRY_ALPHA)) +
-      # geom_line() +
-      geom_point() +
-      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
-      #geom_vline(xintercept = 81.5, col = "red") +
-      #ylim(0, 1) +
-      xlim(0, 10) +
-      xlab("Avg Understanding") +
-      ylab("Country") +
-      labs(title = "Lib. Dem. in Non-Dem.")
-
-plot4 <- filter(dat_transformed, dat_transformed$regime_bin==1) %>%
-    group_by(B_COUNTRY_ALPHA) %>%
-      summarize(meanunderstanding = mean(lib_dem, na.rm = TRUE)) %>%
-      ggplot(aes(x = meanunderstanding, y = B_COUNTRY_ALPHA)) +
-      # geom_line() +
-      geom_point() +
-      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
-      #geom_vline(xintercept = 81.5, col = "red") +
-      #ylim(0, 1) +
-      xlim(0, 10) +
-      xlab("Avg Understanding") +
-      ylab("Country") +
-      labs(title = "Lib. Dem. in Dem.")
-
-grid.arrange(plot1, plot2, plot3, plot4, ncol=2)
-```
-
-```{r boxes}
-# Understanding of Procedural Democracy for non-democracies
-plot0 <- filter(dat_transformed, dat_transformed$regime_bin==0) %>%
-    group_by(B_COUNTRY_ALPHA) %>%
-      #summarize(meanunderstanding = mean(proc_dem, na.rm = TRUE)) %>%
-      ggplot(aes(x = B_COUNTRY_ALPHA, y = proc_dem)) +
-      geom_boxplot() +
-      # geom_line() +
-      #geom_point() +
-      #geom_errorbarh(height=.2) +
-      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
-      #geom_vline(xintercept = 81.5, col = "red") +
-      #ylim(0, 1) +
-      #xlim(0, 10) +
-      ylab("Avg Understanding") +
-      xlab("Country") +
-      labs(title = "Proc Dem. in Non-Dem.")
-
-# Understanding of Procedural Democracy for democracies
-plot1 <- filter(dat_transformed, dat_transformed$regime_bin==1) %>%
-    group_by(B_COUNTRY_ALPHA) %>%
-      #summarize(meanunderstanding = mean(proc_dem, na.rm = TRUE)) %>%
-      ggplot(aes(x = B_COUNTRY_ALPHA, y = proc_dem)) +
-      geom_boxplot() +
-      # geom_line() +
-      #geom_point() +
-      #geom_errorbarh(height=.2) +
-      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
-      #geom_vline(xintercept = 81.5, col = "red") +
-      #ylim(0, 1) +
-      #xlim(0, 10) +
-      ylab("Avg Understanding") +
-      xlab("Country") +
-      labs(title = "Proc Dem. in Dem.")
-
-# Understanding of Liberal Democracy for non-democracies
-plot2 <- filter(dat_transformed, dat_transformed$regime_bin==0) %>%
-    group_by(B_COUNTRY_ALPHA) %>%
-      #summarize(meanunderstanding = mean(proc_dem, na.rm = TRUE)) %>%
-      ggplot(aes(x = B_COUNTRY_ALPHA, y = lib_dem)) +
-      geom_boxplot() +
-      # geom_line() +
-      #geom_point() +
-      #geom_errorbarh(height=.2) +
-      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
-      #geom_vline(xintercept = 81.5, col = "red") +
-      #ylim(0, 1) +
-      #xlim(0, 10) +
-      ylab("Avg Understanding") +
-      xlab("Country") +
-      labs(title = "Lib. Dem. in Non-Dem.")
-
-# Understanding of Liberal Democracy for democracies
-plot3 <- filter(dat_transformed, dat_transformed$regime_bin==1) %>%
-    group_by(B_COUNTRY_ALPHA) %>%
-      #summarize(meanunderstanding = mean(proc_dem, na.rm = TRUE)) %>%
-      ggplot(aes(x = B_COUNTRY_ALPHA, y = lib_dem)) +
-      geom_boxplot() +
-      # geom_line() +
-      #geom_point() +
-      #geom_errorbarh(height=.2) +
-      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
-      #geom_vline(xintercept = 81.5, col = "red") +
-      #ylim(0, 1) +
-      #xlim(0, 10) +
-      ylab("Avg Understanding") +
-      xlab("Country") +
-      labs(title = "Lib. Dem. in Dem.")
-
-grid.arrange(plot0, plot1, plot2, plot3, ncol=2)
-```
-
-### Scatter Plots Social Media Vs. Understanding of Democracy
-```{r scatter_vars}
-non_dem_proc_dem <- ggplot(dat_nondem, aes(x = sm_pol, y = proc_dem)) + 
-  geom_bin2d() +
-  theme_bw() +
-  xlab("Social Media Use") +
-  ylab("Proc. dem. in non-dem.")
-
-dem_proc_dem <- ggplot(dat_dem, aes(x = sm_pol, y = proc_dem)) + 
-  geom_bin2d() +
-  theme_bw() +
-  xlab("Social Media Use") +
-  ylab("Proc dem. in dem.")
-
-non_dem_lib_dem <- ggplot(dat_nondem, aes(x = sm_pol, y = lib_dem)) + 
-  geom_bin2d() +
-  theme_bw() +
-  xlab("Social Media Use") +
-  ylab("Lib dem in non-dem.")
-
-dem_lib_dem <- ggplot(dat_dem, aes(x = sm_pol, y = lib_dem)) + 
-  geom_bin2d() +
-  theme_bw() +
-  xlab("Social Media Use") +
-  ylab("Liberal dem. in dem.")
-
-grid.arrange(non_dem_proc_dem, dem_proc_dem, non_dem_lib_dem, dem_lib_dem, ncol=2)
-```
-
-
-## Step X: Create variables for mean SM score and mean higher ed by country
-```{r means}
-#Create a variable representing each state's average score for Mundlak/REWB
-dat_transformed_averages <- dat_transformed %>%
-  group_by(B_COUNTRY_ALPHA) %>%
-  mutate(country_higher_ed_avg = mean(higher_ed, na.rm = TRUE),
-         country_sm_avg = mean(sm_pol, na.rm = TRUE),
-         country_proc_dem_avg = mean(proc_dem, na.rm = TRUE)
-         )
-dat_transformed_averages <- as.data.frame(dat_transformed_averages)
-```
-
-
-# Building base models
-```{r base_reg}
-#Model 0 - Understanding of procedural democracy in Non-Democracies
-mod0 <- lmer(proc_dem ~ sm_pol*higher_ed + age + sex+ income + urban + GDPpercap1_scaled + v2mecenefi + (1|B_COUNTRY_ALPHA), data = filter(dat_transformed, dat_transformed$regime_bin==0), REML = FALSE)
-summary(mod0)
-
-#Model 1 - Understanding of procedural democracy in Democracies
-mod1 <- lmer(proc_dem ~ sm_pol*higher_ed + age + sex+ income + urban + GDPpercap1_scaled + v2mecenefi + (1|B_COUNTRY_ALPHA), data = filter(dat_transformed, dat_transformed$regime_bin==1), REML = FALSE)
-summary(mod1)
-
-## WHY are there more observations here than in the paper? Does the number align with the observations in the summary stats
-#Model 2 - Understanding of liberal democracy in Non-Democracies
-mod2 <- lmer(lib_dem ~ sm_pol*higher_ed + age + sex+ income + urban + GDPpercap1_scaled + v2mecenefi + (1|B_COUNTRY_ALPHA), data = filter(dat_transformed, dat_transformed$regime_bin==0), REML = FALSE)
-summary(mod2)
-
-#Model 3 - Understanding of liberal democracy in Democracies
-mod3 <- lmer(lib_dem ~ sm_pol*higher_ed + age + sex+ income + urban + GDPpercap1_scaled + v2mecenefi + (1|B_COUNTRY_ALPHA), data = filter(dat_transformed, dat_transformed$regime_bin==1), REML = FALSE)
-summary(mod3)
-
-stargazer(mod0, mod1, mod2, mod3, type = "text",
-          title = "Understanding of democracy, social media, and higher education",
-          dep.var.labels = c("Understanding of Democracy (Procedural Democracy)", "Understanding of Democracy (Procedural Democracy)"),
-          column.labels = c("Non-democracy (Model 0)", "Democracy (Model 1)", "Non-Democracy (Model 2)", "Democracy (Model 3)"),
-          model.numbers = FALSE,
-          digits=4,
-          order=c("sm_pol:higher_ed", "sm_pol", "higher_ed", "age", "income", "urban", "GDPpercap1_scaled", "v2mecenefi")
-          #keep.stat = c("n"),
-          #add.lines = list(c("neg2ll", neg2ll),
-           #                c("sigmau", sigma_u),
-            #               c("sigmae", sigma_e),
-             #              c("sigma2u", sigma2_u),
-              #             c("sigma2e", sigma2_e))
-          )
-
-base_reg_0 <- filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)%>%
-  #filter(plotrange) %>%
-  ggplot() +
-  #ggplot(aes(x=sm_pol, y=proc_dem, group=higher_ed)) + 
-  #geom_line(size=2, aes(color=higher_ed))+
-  geom_point(aes(x = jitter(sm_pol), y = jitter(proc_dem)), col = "blue", cex = 0.1, data = filter(dat_transformed_averages, higher_ed == 0)) +  #add scatterplot at individual level for higher ed, color red
-  geom_point(aes(x = jitter(sm_pol), y = jitter(proc_dem)), col = "red", cex = 0.1, data = filter(dat_transformed_averages, higher_ed == 1)) +  #add scatterplot at individual level for higher ed, color red
-
-  geom_abline(aes(intercept = fixef(mod0)[1] +    # intercept
-                    fixef(mod0)[3] +              # higher_ed
-                    fixef(mod0)[4]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$age, na.rm=TRUE) +   # age
-                    fixef(mod0)[5] +              # sex
-                    fixef(mod0)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$income, na.rm=TRUE) +   # income
-                    fixef(mod0)[7] +              # urban
-                    fixef(mod0)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mod0)[9]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$v2mecenefi, na.rm=TRUE),  # internet censorship
-
-                  slope = fixef(mod0)[2] + fixef(mod0)[10], color="Higher Ed"), lty = 2, lwd = 1) + #add reference line for higher ed
-  geom_abline(aes(intercept = fixef(mod0)[1] +    # intercept
-                    fixef(mod0)[4]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$age, na.rm=TRUE) +   # age
-                    fixef(mod0)[5] +              # sex
-                    fixef(mod0)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$income, na.rm=TRUE) +   # income
-                    fixef(mod0)[7] +              # urban
-                    fixef(mod0)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mod0)[9]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$v2mecenefi, na.rm=TRUE),  # internet censorship
-
-                  slope = fixef(mod0)[2], color="No Higher Ed"), lty = 2, lwd = 1) + #add reference line for no higher ed
-  #geom_point(aes(x = country_sm_avg, y = proc_dem)) + #add scatterplot at country level, point color defaults to black
-  #geom_abline(aes(intercept = fixef(mod0)[1], slope = (fixef(mod0)[2] + fixef(mod0)[5])), lwd = 1) + #add reference line
-  scale_colour_manual("", 
-                      breaks = c("Higher Ed", "No Higher Ed"),
-                      values = c("red", "blue")) +
-  #xlim(c(-4, 4)) +
-  xlab("Use of social media for political purposes") +
-  ylab("Procedural Democracy") +
-  ggtitle("Non-Democracies")
-
-base_reg_1 <- filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)%>%
-  #filter(plotrange) %>%
-  ggplot() +
-  #ggplot(aes(x=sm_pol, y=proc_dem, group=higher_ed)) + 
-  #geom_line(size=2, aes(color=higher_ed))+
-  geom_point(aes(x = jitter(sm_pol), y = jitter(proc_dem)), col = "blue", cex = 0.1, data = filter(dat_transformed_averages, higher_ed == 0)) +  #add scatterplot at individual level for higher ed, color red
-  geom_point(aes(x = jitter(sm_pol), y = jitter(proc_dem)), col = "red", cex = 0.1, data = filter(dat_transformed_averages, higher_ed == 1)) +  #add scatterplot at individual level for higher ed, color red
-
-  geom_abline(aes(intercept = fixef(mod1)[1] +    # intercept
-                    fixef(mod1)[3] +              # higher_ed
-                    fixef(mod1)[4]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$age, na.rm=TRUE) +   # age
-                    fixef(mod1)[5] +              # sex
-                    fixef(mod1)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$income, na.rm=TRUE) +   # income
-                    fixef(mod1)[7] +              # urban
-                    fixef(mod1)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mod1)[9]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$v2mecenefi, na.rm=TRUE),  # internet censorship
-
-                  slope = fixef(mod1)[2] + fixef(mod1)[10], color="Higher Ed"), lty = 2, lwd = 1) + #add reference line for higher ed
-  geom_abline(aes(intercept = fixef(mod1)[1] +    # intercept
-                    fixef(mod1)[4]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$age, na.rm=TRUE) +   # age
-                    fixef(mod1)[5] +              # sex
-                    fixef(mod1)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$income, na.rm=TRUE) +   # income
-                    fixef(mod1)[7] +              # urban
-                    fixef(mod1)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mod1)[9]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$v2mecenefi, na.rm=TRUE),  # internet censorship
-
-                  slope = fixef(mod1)[2], color="No Higher Ed"), lty = 2, lwd = 1) + #add reference line for no higher ed
-  #geom_point(aes(x = country_sm_avg, y = proc_dem)) + #add scatterplot at country level, point color defaults to black
-  #geom_abline(aes(intercept = fixef(mod0)[1], slope = (fixef(mod0)[2] + fixef(mod0)[5])), lwd = 1) + #add reference line
-  scale_colour_manual("", 
-                      breaks = c("Higher Ed", "No Higher Ed"),
-                      values = c("red", "blue")) +
-  #xlim(c(-4, 4)) +
-  xlab("Use of social media for political purposes") +
-  ylab("Procedural Democracy") +
-  ggtitle("Democracies")
-
-base_reg_2 <- filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)%>%
-  #filter(plotrange) %>%
-  ggplot() +
-  #ggplot(aes(x=sm_pol, y=proc_dem, group=higher_ed)) + 
-  #geom_line(size=2, aes(color=higher_ed))+
-  geom_point(aes(x = jitter(sm_pol), y = jitter(lib_dem)), col = "blue", cex = 0.1, data = filter(dat_transformed_averages, higher_ed == 0)) +  #add scatterplot at individual level for higher ed, color red
-  geom_point(aes(x = jitter(sm_pol), y = jitter(lib_dem)), col = "red", cex = 0.1, data = filter(dat_transformed_averages, higher_ed == 1)) +  #add scatterplot at individual level for higher ed, color red
-
-    geom_abline(aes(intercept = fixef(mod2)[1] +    # intercept
-                    fixef(mod2)[3] +              # higher_ed
-                    fixef(mod2)[4]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$age, na.rm=TRUE) +   # age
-                    fixef(mod2)[5] +              # sex
-                    fixef(mod2)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$income, na.rm=TRUE) +   # income
-                    fixef(mod2)[7] +              # urban
-                    fixef(mod2)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mod2)[9]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$v2mecenefi, na.rm=TRUE),  # internet censorship
-
-                  slope = fixef(mod2)[2] + fixef(mod2)[10], color="Higher Ed"), lty = 2, lwd = 1) + #add reference line for higher ed
-  geom_abline(aes(intercept = fixef(mod2)[1] +    # intercept
-                    fixef(mod2)[4]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$age, na.rm=TRUE) +   # age
-                    fixef(mod2)[5] +              # sex
-                    fixef(mod2)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$income, na.rm=TRUE) +   # income
-                    fixef(mod2)[7] +              # urban
-                    fixef(mod2)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mod2)[9]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$v2mecenefi, na.rm=TRUE),  # internet censorship
-
-                  slope = fixef(mod2)[2], color="No Higher Ed"), lty = 2, lwd = 1) + #add reference line for no higher ed
-  #geom_point(aes(x = country_sm_avg, y = proc_dem)) + #add scatterplot at country level, point color defaults to black
-  #geom_abline(aes(intercept = fixef(mod0)[1], slope = (fixef(mod0)[2] + fixef(mod0)[5])), lwd = 1) + #add reference line
-  scale_colour_manual("", 
-                      breaks = c("Higher Ed", "No Higher Ed"),
-                      values = c("red", "blue")) +
-  #xlim(c(-4, 4)) +
-  xlab("Use of social media for political purposes") +
-  ylab("Liberal Democracy") +
-  ggtitle("Non-Democracies")
-
-base_reg_3 <- filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)%>%
-  #filter(plotrange) %>%
-  ggplot() +
-  #ggplot(aes(x=sm_pol, y=proc_dem, group=higher_ed)) + 
-  #geom_line(size=2, aes(color=higher_ed))+
-  geom_point(aes(x = jitter(sm_pol), y = jitter(lib_dem)), col = "blue", cex = 0.1, data = filter(dat_transformed_averages, higher_ed == 0)) +  #add scatterplot at individual level for higher ed, color red
-  geom_point(aes(x = jitter(sm_pol), y = jitter(lib_dem)), col = "red", cex = 0.1, data = filter(dat_transformed_averages, higher_ed == 1)) +  #add scatterplot at individual level for higher ed, color red
-
-    geom_abline(aes(intercept = fixef(mod3)[1] +    # intercept
-                    fixef(mod3)[3] +              # higher_ed
-                    fixef(mod3)[4]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$age, na.rm=TRUE) +   # age
-                    fixef(mod3)[5] +              # sex
-                    fixef(mod3)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$income, na.rm=TRUE) +   # income
-                    fixef(mod3)[7] +              # urban
-                    fixef(mod3)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mod3)[9]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$v2mecenefi, na.rm=TRUE),  # internet censorship
-
-                  slope = fixef(mod3)[2] + fixef(mod3)[10], color="Higher Ed"), lty = 2, lwd = 1) + #add reference line for higher ed
-  geom_abline(aes(intercept = fixef(mod3)[1] +    # intercept
-                    fixef(mod3)[4]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$age, na.rm=TRUE) +   # age
-                    fixef(mod3)[5] +              # sex
-                    fixef(mod3)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$income, na.rm=TRUE) +   # income
-                    fixef(mod3)[7] +              # urban
-                    fixef(mod3)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mod3)[9]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1)$v2mecenefi, na.rm=TRUE),  # internet censorship
-
-                  slope = fixef(mod3)[2], color="No Higher Ed"), lty = 2, lwd = 1) + #add reference line for no higher ed
-  #geom_point(aes(x = country_sm_avg, y = proc_dem)) + #add scatterplot at country level, point color defaults to black
-  #geom_abline(aes(intercept = fixef(mod0)[1], slope = (fixef(mod0)[2] + fixef(mod0)[5])), lwd = 1) + #add reference line
-  scale_colour_manual("", 
-                      breaks = c("Higher Ed", "No Higher Ed"),
-                      values = c("red", "blue")) +
-  #xlim(c(-4, 4)) +
-  xlab("Use of social media for political purposes") +
-  ylab("Liberal Democracy") +
-  ggtitle("Democracies")
-
-grid.arrange(base_reg_0, base_reg_1, base_reg_2, base_reg_3, ncol=2)
-```
-# Building models with Mundlak
-
-```{r mundlak}
-#Model 0 - Understanding of procedural democracy in Non-Democracies
-mund_mod0 <- lmer(proc_dem ~ sm_pol*higher_ed + country_higher_ed_avg*country_sm_avg + age + sex+ income + urban + GDPpercap1_scaled + v2mecenefi + (1|B_COUNTRY_ALPHA), data = filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0), REML = FALSE)
-summary(mund_mod0)
-
-#Model 1 - Understanding of procedural democracy in Democracies
-mund_mod1 <- lmer(proc_dem ~ sm_pol*higher_ed + country_higher_ed_avg*country_sm_avg + age + sex+ income + urban + GDPpercap1_scaled + v2mecenefi + (1|B_COUNTRY_ALPHA), data = filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1), REML = FALSE)
-summary(mund_mod1)
-
-## todo: WHY are there more observations here than in the paper? Does the number align with the observations in the summary stats
-#Model 2 - Understanding of liberal democracy in Non-Democracies
-mund_mod2 <- lmer(lib_dem ~ sm_pol*higher_ed + country_higher_ed_avg*country_sm_avg + age + sex+ income + urban + GDPpercap1_scaled + v2mecenefi + (1|B_COUNTRY_ALPHA), data = filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0), REML = FALSE)
-summary(mund_mod2)
-
-#Model 3 - Understanding of liberal democracy in Democracies
-mund_mod3 <- lmer(lib_dem ~ sm_pol*higher_ed + country_higher_ed_avg*country_sm_avg + age + sex+ income + urban + GDPpercap1_scaled + v2mecenefi + (1|B_COUNTRY_ALPHA), data = filter(dat_transformed_averages, dat_transformed_averages$regime_bin==1), REML = FALSE)
-summary(mund_mod3)
-
-stargazer(mund_mod0, mund_mod1, mund_mod2, mund_mod3, type = "text",
-          title = "Understanding of democracy, social media, and higher education",
-          dep.var.labels = c("Understanding of Democracy (Procedural Democracy)", "Understanding of Democracy (Procedural Democracy)"),
-          column.labels = c("Non-democracy (Model 0)", "Democracy (Model 1)", "Non-Democracy (Model 2)", "Democracy (Model 3)"),
-          model.numbers = FALSE,
-          digits=4,
-          order=c("sm_pol:higher_ed", "sm_pol", "higher_ed", "age", "income", "urban", "GDPpercap1_scaled", "v2mecenefi")
-          #keep.stat = c("n"),
-          #add.lines = list(c("neg2ll", neg2ll),
-           #                c("sigmau", sigma_u),
-            #               c("sigmae", sigma_e),
-             #              c("sigma2u", sigma2_u),
-              #             c("sigma2e", sigma2_e))
-          )
-
-#Graphical depiction
-#dat1$plotrange <- (dat1$sesavgall < 3)  & (dat1$sesavgall > -4) & (dat1$meanavg > 1) & (dat1$meanavg < 10)
-
-mund_reg_0 <- filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)%>%
-  #filter(plotrange) %>%
-  ggplot() +
-  #ggplot(aes(x=sm_pol, y=proc_dem, group=higher_ed)) + 
-  #geom_line(size=2, aes(color=higher_ed))+
-  
-  # INDIVIDUAL LEVEL
-  geom_point(aes(x = jitter(sm_pol), y = jitter(proc_dem)), col = "blue", cex = 0.1, data = filter(dat_transformed_averages, higher_ed == 0)) +  #add scatterplot at individual level for no higher ed, color red
-  geom_point(aes(x = jitter(sm_pol), y = jitter(proc_dem)), col = "red", cex = 0.1, data = filter(dat_transformed_averages, higher_ed == 1)) +  #add scatterplot at individual level for higher ed, color red
-
-  # higher ed individual line
-  geom_abline(aes(intercept =
-                    fixef(mund_mod0)[1] +      # Intercept 
-                    fixef(mund_mod0)[3] +       # higher_ed
-                    fixef(mund_mod0)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$age, na.rm=TRUE) +   # age
-                    fixef(mund_mod0)[7] +              # sex
-                    fixef(mund_mod0)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$income, na.rm=TRUE) +   # income
-                    fixef(mund_mod0)[9] +              # urban
-                    fixef(mund_mod0)[10]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mund_mod0)[11]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$v2mecenefi, na.rm=TRUE),  # internet censorship
-                    
-              slope = 
-                    fixef(mund_mod0)[2] +      # sm_pol
-                    fixef(mund_mod0)[12],      # sm_pol:higher_ed
-              color="Individual-Level, Higher Ed"), lty = 2, lwd = 1) + 
-  
-  # no higher ed individual line
-  geom_abline(aes(intercept =
-                    fixef(mund_mod0)[1] +      # Intercept 
-                    fixef(mund_mod0)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$age, na.rm=TRUE) +   # age
-                    fixef(mund_mod0)[7] +              # sex
-                    fixef(mund_mod0)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$income, na.rm=TRUE) +   # income
-                    fixef(mund_mod0)[9] +              # urban
-                    fixef(mund_mod0)[10]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mund_mod0)[11]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$v2mecenefi, na.rm=TRUE),  # internet censorship
-                    
-              slope = 
-                    fixef(mund_mod0)[2],      # sm_pol
-              color="Individual-Level, No Higher Ed"), lwd = 1) +
-  
-  # COUNTRY LEVEL
-  geom_point(aes(x = country_sm_avg, y = country_proc_dem_avg), col = "lightblue", data = filter(dat_transformed_averages, country_higher_ed_avg < 0.5)) + #add scatterplot at country level for countries with <50% individuals with higher ed, color light blue
-  geom_point(aes(x = country_sm_avg, y = country_proc_dem_avg), col = "pink", data = filter(dat_transformed_averages, country_higher_ed_avg >= 0.5)) + #add scatterplot at country level for countries with >=50% individuals with higher ed, color pink
-  
-  # higher ed countries line
-  geom_abline(aes(intercept =
-                    fixef(mund_mod0)[1] +      # Intercept 
-                    fixef(mund_mod0)[3] +       # higher_ed
-                    fixef(mund_mod0)[4] +       # country higher_ed average
-                    fixef(mund_mod0)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$age, na.rm=TRUE) +   # age
-                    fixef(mund_mod0)[7] +              # sex
-                    fixef(mund_mod0)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$income, na.rm=TRUE) +   # income
-                    fixef(mund_mod0)[9] +              # urban
-                    fixef(mund_mod0)[10]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mund_mod0)[11]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$v2mecenefi, na.rm=TRUE),  # internet censorship
-                    
-              slope = 
-                    fixef(mund_mod0)[2] +      # sm_pol
-                    fixef(mund_mod0)[5] +       # country sm average
-                    fixef(mund_mod0)[12] +      # sm_pol:higher_ed
-                    fixef(mund_mod0)[13],      # average sm_pol:higher_ed
-              color="Country-Level, Higher Ed"), lty = 2, lwd = 1) +
-  
-  # no higher ed countries line
-  geom_abline(aes(intercept =
-                    fixef(mund_mod0)[1] +      # Intercept 
-                    fixef(mund_mod0)[6]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$age, na.rm=TRUE) +   # age
-                    fixef(mund_mod0)[7] +              # sex
-                    fixef(mund_mod0)[8]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$income, na.rm=TRUE) +   # income
-                    fixef(mund_mod0)[9] +              # urban
-                    fixef(mund_mod0)[10]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$GDPpercap1_scaled, na.rm=TRUE) +   # gdp
-                    fixef(mund_mod0)[11]*mean(filter(dat_transformed_averages, dat_transformed_averages$regime_bin==0)$v2mecenefi, na.rm=TRUE),  # internet censorship
-                    
-              slope = 
-                    fixef(mund_mod0)[2] +      # sm_pol
-                    fixef(mund_mod0)[5],       # country sm average
-                  color="Country-Level, No Higher Ed"), lty = 2, lwd = 1) + #add reference line for non-higher ed countries
-  
-  scale_colour_manual("", 
-                      breaks = c("Individual-Level, Higher Ed", "Individual-Level, No Higher Ed", "Country-Level, Higher Ed", "Country-Level, No Higher Ed"),
-                      values = c("red", "blue", "pink", "lightblue")) +
-  #xlim(c(-4, 4)) +
-  xlab("Use of social media for political purposes") +
-  ylab("Understanding of Democracy (Procedural Democracy)") +
-  ggtitle("mundlak")
-
-mund_reg_0
-```
 # Model building
 
 ## model 0 -- single predictor
@@ -1092,7 +764,7 @@ simple_proc_nondem_reg_3 <- dat_transformed_nondem%>%
 
                   slope =     fixef(simple_proc_nondem_mod3)[2] +        # social media
                               fixef(simple_proc_nondem_mod3)[10],       # social media*higher ed
-                  color="Higher Ed"), lwd = 1) + # add reference line
+                  color="Higher Ed"), lty = 2, lwd = 1) + # add reference line
     
   
     # no higher ed
@@ -1148,7 +820,7 @@ mund_proc_nondem_reg_3 <- dat_transformed_nondem%>%
 
                   slope =     fixef(mund_proc_nondem_mod3)[2] +        # social media
                               fixef(mund_proc_nondem_mod3)[12],       # social media*higher ed
-                  color="Individual-Level, Higher Ed"), lwd = 1) + # add reference line
+                  color="Individual-Level, Higher Ed"), lty = 2, lwd = 1) + # add reference line
     
     # no higher ed
   geom_point(aes(x = jitter(sm_pol_demeaned), y = jitter(proc_dem_demeaned)), col = "blue", cex = 0.1, data = filter(dat_transformed_nondem, dat_transformed_nondem$higher_ed==0)) +  #add scatterplot
@@ -1181,7 +853,7 @@ mund_proc_nondem_reg_3 <- dat_transformed_nondem%>%
                               fixef(mund_proc_nondem_mod3)[4] +      # country sm average
                               fixef(mund_proc_nondem_mod3)[12]*mean(country_nondem_higher_ed_dat$higher_ed, na.rm=TRUE) +     # higher_ed*sm_pol
                               fixef(mund_proc_nondem_mod3)[13]*mean(country_nondem_higher_ed_dat$higher_ed, na.rm=TRUE),      # avg_higher_ed*avg_sm_pol
-                    color="Country-Level, Maj. Higher Ed"), lwd = 1) +
+                    color="Country-Level, Maj. Higher Ed"), lty = 2,lwd = 1) +
   
    # higher ed below median
   geom_point(aes(x = sm_pol_demeaned_avg, y = proc_dem_demeaned_avg), col = "lightblue", data = country_nondem_no_higher_ed_dat) + #add scatterplot 
@@ -1269,7 +941,7 @@ simple_proc_dem_reg_3 <- dat_transformed_dem%>%
 
                   slope =     fixef(simple_proc_dem_mod3)[2] +        # social media
                               fixef(simple_proc_dem_mod3)[10],       # social media*higher ed
-                  color="Higher Ed"), lwd = 1) + # add reference line
+                  color="Higher Ed"),lty = 2, lwd = 1) + # add reference line
     
   
     # no higher ed
@@ -1324,7 +996,7 @@ mund_proc_dem_reg_3 <- dat_transformed_dem%>%
 
                   slope =     fixef(mund_proc_dem_mod3)[2] +        # social media
                               fixef(mund_proc_dem_mod3)[12],       # social media*higher ed
-                  color="Individual-Level, Higher Ed"), lwd = 1) + # add reference line
+                  color="Individual-Level, Higher Ed"), lty = 2, lwd = 1) + # add reference line
     
     # no higher ed
   geom_point(aes(x = jitter(sm_pol_demeaned), y = jitter(proc_dem_demeaned)), col = "blue", cex = 0.1, data = filter(dat_transformed_dem, dat_transformed_dem$higher_ed==0)) +  #add scatterplot
@@ -1357,7 +1029,7 @@ mund_proc_dem_reg_3 <- dat_transformed_dem%>%
                               fixef(mund_proc_dem_mod3)[4] +      # country sm average
                               fixef(mund_proc_dem_mod3)[12]*mean(country_dem_higher_ed_dat$higher_ed, na.rm=TRUE) +     # higher_ed*sm_pol
                               fixef(mund_proc_dem_mod3)[13]*mean(country_dem_higher_ed_dat$higher_ed, na.rm=TRUE),      # avg_higher_ed*avg_sm_pol
-                    color="Country-Level, Maj. Higher Ed"), lwd = 1) +
+                    color="Country-Level, Maj. Higher Ed"), lty = 2, lwd = 1) +
   
    # higher ed below median
   geom_point(aes(x = sm_pol_demeaned_avg, y = proc_dem_demeaned_avg), col = "lightblue", data = country_dem_no_higher_ed_dat) + #add scatterplot 
@@ -1392,12 +1064,67 @@ mund_proc_dem_reg_3
 
 ## Model 3
 
+### Simple
+``` {r simple-proc-dem-3}
+
+#Model 3 - Understanding of procedural democracy in Democracies
+simple_lib_nondem_mod3 <- lmer(lib_dem_demeaned ~ sm_pol_demeaned*higher_ed + age + sex+ income + urban + GDPpercap1_scaled + v2mecenefi + (1|B_COUNTRY_ALPHA), data = dat_transformed_nondem, REML = FALSE)
+summary(simple_lib_nondem_mod3)
+
+
+simple_lib_nondem_reg_3 <- dat_transformed_nondem%>%
+  #filter(plotrange) %>%
+  ggplot() +
+
+  # higher ed
+  geom_point(aes(x = jitter(sm_pol_demeaned), y = jitter(proc_dem_demeaned)), col = "red", cex = 0.1, data = filter(dat_transformed_nondem, dat_transformed_nondem$higher_ed==1)) +  #add scatterplot
+
+  geom_abline(aes(intercept = fixef(simple_lib_nondem_mod3)[1] +     # intercept
+                              fixef(simple_lib_nondem_mod3)[3] +     # higher ed
+                              fixef(simple_lib_nondem_mod3)[4]*mean(dat_transformed_nondem$age, na.rm=TRUE) +     # age (set to mean)
+                              fixef(simple_lib_nondem_mod3)[5] +     # sex (set to male)
+                              fixef(simple_lib_nondem_mod3)[6]*mean(dat_transformed_nondem$income, na.rm=TRUE) +     # income
+                              fixef(simple_lib_nondem_mod3)[7] +     # urban (set to urban)
+                              fixef(simple_lib_nondem_mod3)[8]*mean(dat_transformed_nondem$GDPpercap1_scaled, na.rm=TRUE) +     # gdp (set to avg)
+                              fixef(simple_lib_nondem_mod3)[9]*mean(dat_transformed_nondem$v2mecenefi, na.rm=TRUE),     # internet censorship
+
+                  slope =     fixef(simple_lib_nondem_mod3)[2] +        # social media
+                              fixef(simple_lib_nondem_mod3)[10],       # social media*higher ed
+                  color="Higher Ed"), lty = 2, lwd = 1) + # add reference line
+    
+  
+    # no higher ed
+  geom_point(aes(x = jitter(sm_pol_demeaned), y = jitter(proc_dem_demeaned)), col = "blue", cex = 0.1, data = filter(dat_transformed_nondem, dat_transformed_nondem$higher_ed==0)) +  #add scatterplot
+
+  geom_abline(aes(intercept = fixef(simple_lib_nondem_mod3)[1] +     # intercept
+                              fixef(simple_lib_nondem_mod3)[4]*mean(dat_transformed_nondem$age, na.rm=TRUE) +     # age (set to mean)
+                              fixef(simple_lib_nondem_mod3)[5] +     # sex (set to male)
+                              fixef(simple_lib_nondem_mod3)[6]*mean(dat_transformed_nondem$income, na.rm=TRUE) +     # income
+                              fixef(simple_lib_nondem_mod3)[7] +     # urban (set to urban)
+                              fixef(simple_lib_nondem_mod3)[8]*mean(dat_transformed_nondem$GDPpercap1_scaled, na.rm=TRUE) +     # gdp (set to avg)
+                              fixef(simple_lib_nondem_mod3)[9]*mean(dat_transformed_nondem$v2mecenefi, na.rm=TRUE),     # internet censorship
+
+                  slope =     fixef(simple_lib_nondem_mod3)[2],        # social media
+                  color="No Higher Ed"), lwd = 1) + #add reference line
+
+
+  scale_colour_manual("", 
+                      breaks = c("Higher Ed", "No Higher Ed"),
+                      values = c("red", "blue")) +
+  #xlim(c(-4, 4)) +
+  xlab("Use of social media for political purposes") +
+  ylab("Procedural Democracy") +
+  ggtitle("Democracies")
+
+simple_lib_nondem_reg_3
+```
+
 ### Mundlak
 ``` {r mund-lib-nondem-3}
 
 #Model 3 - Understanding of liberal democracy in Non-Democracies
 mund_lib_nondem_mod3 <- lmer(lib_dem_demeaned ~ sm_pol_demeaned*higher_ed + sm_pol_demeaned_avg*higher_ed_avg + age + sex+ income + urban + GDPpercap1_scaled + v2mecenefi + (1|B_COUNTRY_ALPHA), data = dat_transformed_nondem, REML = FALSE)
-summary(mund_mod3)
+summary(mund_lib_nondem_mod3)
 
 
 mund_lib_nondem_reg_3 <- dat_transformed_nondem%>%
@@ -1419,7 +1146,7 @@ mund_lib_nondem_reg_3 <- dat_transformed_nondem%>%
 
                   slope =     fixef(mund_lib_nondem_mod3)[2] +        # social media
                               fixef(mund_lib_nondem_mod3)[12],       # social media*higher ed
-                  color="Individual-Level, Higher Ed"), lwd = 1) + # add reference line
+                  color="Individual-Level, Higher Ed"), lty = 2, lwd = 1) + # add reference line
     
     # no higher ed
   geom_point(aes(x = jitter(sm_pol_demeaned), y = jitter(lib_dem_demeaned)), col = "blue", cex = 0.1, data = filter(dat_transformed_nondem, dat_transformed_nondem$higher_ed==0)) +  #add scatterplot
@@ -1452,7 +1179,7 @@ mund_lib_nondem_reg_3 <- dat_transformed_nondem%>%
                               fixef(mund_lib_nondem_mod3)[4] +      # country sm average
                               fixef(mund_lib_nondem_mod3)[12]*mean(country_nondem_higher_ed_dat$higher_ed, na.rm=TRUE) +     # higher_ed*sm_pol
                               fixef(mund_lib_nondem_mod3)[13]*mean(country_nondem_higher_ed_dat$higher_ed, na.rm=TRUE),      # avg_higher_ed*avg_sm_pol
-                    color="Country-Level, Maj. Higher Ed"), lwd = 1) +
+                    color="Country-Level, Maj. Higher Ed"), lty = 2, lwd = 1) +
   
    # higher ed below median
   geom_point(aes(x = sm_pol_demeaned_avg, y = lib_dem_demeaned_avg), col = "lightblue", data = country_nondem_no_higher_ed_dat) + #add scatterplot 
@@ -1487,6 +1214,61 @@ mund_lib_nondem_reg_3
 
 ## Model 3
 
+### simple
+``` {r simple-proc-dem-3}
+
+#Model 3 - Understanding of procedural democracy in Democracies
+simple_lib_dem_mod3 <- lmer(lib_dem_demeaned ~ sm_pol_demeaned*higher_ed + age + sex+ income + urban + GDPpercap1_scaled + v2mecenefi + (1|B_COUNTRY_ALPHA), data = dat_transformed_dem, REML = FALSE)
+summary(simple_lib_dem_mod3)
+
+
+simple_lib_dem_reg_3 <- dat_transformed_dem%>%
+  #filter(plotrange) %>%
+  ggplot() +
+
+  # higher ed
+  geom_point(aes(x = jitter(sm_pol_demeaned), y = jitter(lib_dem_demeaned)), col = "red", cex = 0.1, data = filter(dat_transformed_dem, dat_transformed_dem$higher_ed==1)) +  #add scatterplot
+
+  geom_abline(aes(intercept = fixef(simple_lib_dem_mod3)[1] +     # intercept
+                              fixef(simple_lib_dem_mod3)[3] +     # higher ed
+                              fixef(simple_lib_dem_mod3)[4]*mean(dat_transformed_dem$age, na.rm=TRUE) +     # age (set to mean)
+                              fixef(simple_lib_dem_mod3)[5] +     # sex (set to male)
+                              fixef(simple_lib_dem_mod3)[6]*mean(dat_transformed_dem$income, na.rm=TRUE) +     # income
+                              fixef(simple_lib_dem_mod3)[7] +     # urban (set to urban)
+                              fixef(simple_lib_dem_mod3)[8]*mean(dat_transformed_dem$GDPpercap1_scaled, na.rm=TRUE) +     # gdp (set to avg)
+                              fixef(simple_lib_dem_mod3)[9]*mean(dat_transformed_dem$v2mecenefi, na.rm=TRUE),     # internet censorship
+
+                  slope =     fixef(simple_lib_dem_mod3)[2] +        # social media
+                              fixef(simple_lib_dem_mod3)[10],       # social media*higher ed
+                  color="Higher Ed"), lty = 2, lwd = 1) + # add reference line
+    
+  
+    # no higher ed
+  geom_point(aes(x = jitter(sm_pol_demeaned), y = jitter(lib_dem_demeaned)), col = "blue", cex = 0.1, data = filter(dat_transformed_dem, dat_transformed_dem$higher_ed==0)) +  #add scatterplot
+
+  geom_abline(aes(intercept = fixef(simple_lib_dem_mod3)[1] +     # intercept
+                              fixef(simple_lib_dem_mod3)[4]*mean(dat_transformed_dem$age, na.rm=TRUE) +     # age (set to mean)
+                              fixef(simple_lib_dem_mod3)[5] +     # sex (set to male)
+                              fixef(simple_lib_dem_mod3)[6]*mean(dat_transformed_dem$income, na.rm=TRUE) +     # income
+                              fixef(simple_lib_dem_mod3)[7] +     # urban (set to urban)
+                              fixef(simple_lib_dem_mod3)[8]*mean(dat_transformed_dem$GDPpercap1_scaled, na.rm=TRUE) +     # gdp (set to avg)
+                              fixef(simple_lib_dem_mod3)[9]*mean(dat_transformed_dem$v2mecenefi, na.rm=TRUE),     # internet censorship
+
+                  slope =     fixef(simple_lib_dem_mod3)[2],        # social media
+                  color="No Higher Ed"), lwd = 1) + #add reference line
+
+
+  scale_colour_manual("", 
+                      breaks = c("Higher Ed", "No Higher Ed"),
+                      values = c("red", "blue")) +
+  #xlim(c(-4, 4)) +
+  xlab("Use of social media for political purposes") +
+  ylab("Procedural Democracy") +
+  ggtitle("Democracies")
+
+simple_lib_dem_reg_3
+```
+
 ### Mundlak
 ``` {r mund-lib-dem-3}
 
@@ -1514,7 +1296,7 @@ mund_lib_dem_reg_3 <- dat_transformed_dem%>%
 
                   slope =     fixef(mund_lib_dem_mod3)[2] +        # social media
                               fixef(mund_lib_dem_mod3)[12],       # social media*higher ed
-                  color="Individual-Level, Higher Ed"), lwd = 1) + # add reference line
+                  color="Individual-Level, Higher Ed"), lty = 2, lwd = 1) + # add reference line
     
     # no higher ed
   geom_point(aes(x = jitter(sm_pol_demeaned), y = jitter(lib_dem_demeaned)), col = "blue", cex = 0.1, data = filter(dat_transformed_dem, dat_transformed_dem$higher_ed==0)) +  #add scatterplot
@@ -1547,7 +1329,7 @@ mund_lib_dem_reg_3 <- dat_transformed_dem%>%
                               fixef(mund_lib_dem_mod3)[4] +      # country sm average
                               fixef(mund_lib_dem_mod3)[12]*mean(country_dem_higher_ed_dat$higher_ed, na.rm=TRUE) +     # higher_ed*sm_pol
                               fixef(mund_lib_dem_mod3)[13]*mean(country_dem_higher_ed_dat$higher_ed, na.rm=TRUE),      # avg_higher_ed*avg_sm_pol
-                    color="Country-Level, Maj. Higher Ed"), lwd = 1) +
+                    color="Country-Level, Maj. Higher Ed"), lty = 2, lwd = 1) +
   
    # higher ed below median
   geom_point(aes(x = sm_pol_demeaned_avg, y = lib_dem_demeaned_avg), col = "lightblue", data = country_dem_no_higher_ed_dat) + #add scatterplot 
@@ -1579,10 +1361,129 @@ mund_lib_dem_reg_3 <- dat_transformed_dem%>%
 mund_lib_dem_reg_3
 ```
 
+``` {r all-simple}
+ggarrange(simple_proc_nondem_reg_3, simple_proc_dem_reg_3, simple_lib_nondem_reg_3, simple_lib_dem_reg_3, ncol=2, nrow=2, common.legend = TRUE, legend="right")
+```
+
+```{r all-simple-stargazer}
+
+# Shortening length of var names to avoid stargazer error
+m1 <- simple_proc_nondem_mod3
+m2 <- simple_proc_dem_mod3
+m3 <- simple_lib_nondem_mod3
+m4 <- simple_lib_dem_mod3
+
+stargazer(m1, m2, m3, m4,
+          type = "text",
+          #type = "html", 
+          #out="simple.html",
+          title = "Understanding of democracy, social media, and higher education",
+          dep.var.labels = c("Understanding of Democracy (Procedural Democracy)", "Understanding of Democracy (Liberal Democracy)"),
+          column.labels = c("Non-democracy", "Democracy", "Non-Democracy", "Democracy"),
+          model.numbers = FALSE,
+          digits=4,
+          covariate.labels=c("Social Media Use","Higher Ed Attainment", "Social Media*Higher Ed", "Age", "Male", "Income", "Urbanity", "Country GDP", "Country Internet Censorship"),
+          order=c("^sm_pol_demeaned$", "^higher_ed$", "^sm_pol_demeaned:higher_ed$",  "age", "sex", "income", "urban", "GDPpercap1_scaled", "v2mecenefi")
+          )
+```
+
+```{r all-mund-stargazer}
+# Shortening length of var names to avoid stargazer error
+m1 <- mund_proc_nondem_mod3
+m2 <- mund_proc_dem_mod3
+m3 <- mund_lib_nondem_mod3
+m4 <- mund_lib_dem_mod3
+
+stargazer(m1, m2, m3, m4, 
+          type = "text",
+          #type = "html", 
+          #out="mund.html",
+          title = "Understanding of democracy, social media, and higher education",
+          dep.var.labels = c("Understanding of Democracy (Procedural Democracy)", "Understanding of Democracy (Liberal Democracy)"),
+          column.labels = c("Non-democracy", "Democracy", "Non-Democracy", "Democracy"),
+          model.numbers = FALSE,
+          digits=4,
+          covariate.labels=c("Social Media Use","Higher Ed Attainment", "Social Media*Higher Ed", "Country Avg Social Media Use", "Country Avg Higher Ed", "Country Avg Social Media*Avg Higher Ed", "Age", "Male", "Income", "Urbanity", "Country GDP", "Country Internet Censorship"),
+          order=c("^sm_pol_demeaned$", "^higher_ed$", "^sm_pol_demeaned:higher_ed$", "^sm_pol_demeaned_avg$", "^higher_ed_avg$", "^sm_pol_demeaned_avg:higher_ed_avg$",  "age", "sex", "income", "urban", "GDPpercap1_scaled", "v2mecenefi")
+          )
+```
+
 ``` {r all-mundlak}
 ggarrange(mund_proc_nondem_reg_3, mund_proc_dem_reg_3, mund_lib_nondem_reg_3, mund_lib_dem_reg_3, ncol=2, nrow=2, common.legend = TRUE, legend="right")
 ```
 # extra stuff
+
+```{r boxes}
+# Understanding of Procedural Democracy for non-democracies
+plot0 <- filter(dat_transformed, dat_transformed$regime_bin==0) %>%
+    group_by(B_COUNTRY_ALPHA) %>%
+      #summarize(meanunderstanding = mean(proc_dem, na.rm = TRUE)) %>%
+      ggplot(aes(x = B_COUNTRY_ALPHA, y = proc_dem)) +
+      geom_boxplot() +
+      # geom_line() +
+      #geom_point() +
+      #geom_errorbarh(height=.2) +
+      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+      #geom_vline(xintercept = 81.5, col = "red") +
+      #ylim(0, 1) +
+      #xlim(0, 10) +
+      ylab("Avg Understanding") +
+      xlab("Country") +
+      labs(title = "Proc Dem. in Non-Dem.")
+
+# Understanding of Procedural Democracy for democracies
+plot1 <- filter(dat_transformed, dat_transformed$regime_bin==1) %>%
+    group_by(B_COUNTRY_ALPHA) %>%
+      #summarize(meanunderstanding = mean(proc_dem, na.rm = TRUE)) %>%
+      ggplot(aes(x = B_COUNTRY_ALPHA, y = proc_dem)) +
+      geom_boxplot() +
+      # geom_line() +
+      #geom_point() +
+      #geom_errorbarh(height=.2) +
+      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+      #geom_vline(xintercept = 81.5, col = "red") +
+      #ylim(0, 1) +
+      #xlim(0, 10) +
+      ylab("Avg Understanding") +
+      xlab("Country") +
+      labs(title = "Proc Dem. in Dem.")
+
+# Understanding of Liberal Democracy for non-democracies
+plot2 <- filter(dat_transformed, dat_transformed$regime_bin==0) %>%
+    group_by(B_COUNTRY_ALPHA) %>%
+      #summarize(meanunderstanding = mean(proc_dem, na.rm = TRUE)) %>%
+      ggplot(aes(x = B_COUNTRY_ALPHA, y = lib_dem)) +
+      geom_boxplot() +
+      # geom_line() +
+      #geom_point() +
+      #geom_errorbarh(height=.2) +
+      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+      #geom_vline(xintercept = 81.5, col = "red") +
+      #ylim(0, 1) +
+      #xlim(0, 10) +
+      ylab("Avg Understanding") +
+      xlab("Country") +
+      labs(title = "Lib. Dem. in Non-Dem.")
+
+# Understanding of Liberal Democracy for democracies
+plot3 <- filter(dat_transformed, dat_transformed$regime_bin==1) %>%
+    group_by(B_COUNTRY_ALPHA) %>%
+      #summarize(meanunderstanding = mean(proc_dem, na.rm = TRUE)) %>%
+      ggplot(aes(x = B_COUNTRY_ALPHA, y = lib_dem)) +
+      geom_boxplot() +
+      # geom_line() +
+      #geom_point() +
+      #geom_errorbarh(height=.2) +
+      #geom_abline(mapping = NULL, data = NULL, slope = 0.474, intercept = 1.230) +
+      #geom_vline(xintercept = 81.5, col = "red") +
+      #ylim(0, 1) +
+      #xlim(0, 10) +
+      ylab("Avg Understanding") +
+      xlab("Country") +
+      labs(title = "Lib. Dem. in Dem.")
+
+grid.arrange(plot0, plot1, plot2, plot3, ncol=2)
+```
 
 ``` {r extras-0}
 #NUM OBSERVATIONS
